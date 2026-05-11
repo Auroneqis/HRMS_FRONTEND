@@ -4,7 +4,7 @@ import { useAuth } from '../context/useAuth';
 import {
   MapPin, Camera, LogIn, LogOut, Upload, X,
   CheckCircle, AlertCircle, Clock, Timer, CalendarCheck,
-  Pencil, History, ShieldAlert,Download
+  Pencil, History, ShieldAlert, Download
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -40,13 +40,13 @@ function formatElapsedMs(ms) {
 const STATUS_OPTIONS = ['PRESENT', 'ABSENT', 'HALF_DAY', 'ON_LEAVE', 'WORK_FROM_HOME', 'HOLIDAY'];
 
 const STATUS_COLORS = {
-  PRESENT:        'bg-green-100 text-green-700',
-  ABSENT:         'bg-red-100 text-red-700',
-  HALF_DAY:       'bg-yellow-100 text-yellow-700',
-  ON_LEAVE:       'bg-blue-100 text-blue-700',
+  PRESENT: 'bg-green-100 text-green-700',
+  ABSENT: 'bg-red-100 text-red-700',
+  HALF_DAY: 'bg-yellow-100 text-yellow-700',
+  ON_LEAVE: 'bg-blue-100 text-blue-700',
   WORK_FROM_HOME: 'bg-purple-100 text-purple-700',
-  HOLIDAY:        'bg-orange-100 text-orange-700',
-  NOT_MARKED:     'bg-slate-100 text-slate-500',
+  HOLIDAY: 'bg-orange-100 text-orange-700',
+  NOT_MARKED: 'bg-slate-100 text-slate-500',
 };
 
 // ── Edit Attendance Modal ─────────────────────────────────────────────────────
@@ -71,7 +71,7 @@ function EditModal({ row, onClose, onSaved }) {
         status: form.status,
         reason: form.reason,
         remarks: form.remarks || null,
-        checkIn:  form.checkIn  ? form.checkIn  + ':00' : null,
+        checkIn: form.checkIn ? form.checkIn + ':00' : null,
         checkOut: form.checkOut ? form.checkOut + ':00' : null,
       };
       const res = await attendanceAPI.editAttendance(row.attendanceId, payload);
@@ -225,7 +225,7 @@ export default function Attendance() {
   const [adminError, setAdminError] = useState('');
 
   const [search, setSearch] = useState('');
-  const [filterType, setFilterType] = useState('TODAY'); 
+  const [filterType, setFilterType] = useState('TODAY');
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
@@ -304,99 +304,99 @@ export default function Attendance() {
   };
 
   const loadAdminAttendance = async () => {
-  setAdminLoading(true);
-  setAdminError('');
+    setAdminLoading(true);
+    setAdminError('');
 
-  try {
-    let res;
-    const today = new Date();
+    try {
+      let res;
+      const today = new Date();
 
-    const format = (d) => d.toISOString().slice(0, 10);
+      const format = (d) => d.toISOString().slice(0, 10);
 
-    if (filterType === 'TODAY') {
-      res = await attendanceAPI.getByDate(format(today));
-    } 
-    else if (filterType === 'YESTERDAY') {
-      const y = new Date();
-      y.setDate(today.getDate() - 1);
-      res = await attendanceAPI.getByDate(format(y));
-    } 
-    else if (filterType === 'DATE' && selectedDate) {
-      res = await attendanceAPI.getByDate(selectedDate);
-    } 
-    else if (filterType === 'MONTH' && selectedMonth) {
-  res = await attendanceAPI.reportMonthly({ month: selectedMonth + '-01' });
-} 
-else if (filterType === 'YEAR' && selectedYear) {
+      if (filterType === 'TODAY') {
+        res = await attendanceAPI.getByDate(format(today));
+      }
+      else if (filterType === 'YESTERDAY') {
+        const y = new Date();
+        y.setDate(today.getDate() - 1);
+        res = await attendanceAPI.getByDate(format(y));
+      }
+      else if (filterType === 'DATE' && selectedDate) {
+        res = await attendanceAPI.getByDate(selectedDate);
+      }
+      else if (filterType === 'MONTH' && selectedMonth) {
+        res = await attendanceAPI.reportMonthly({ month: selectedMonth + '-01' });
+      }
+      else if (filterType === 'YEAR' && selectedYear) {
 
-  const months = [
-    '01','02','03','04','05','06',
-    '07','08','09','10','11','12'
-  ];
+        const months = [
+          '01', '02', '03', '04', '05', '06',
+          '07', '08', '09', '10', '11', '12'
+        ];
 
-  let allData = [];
+        let allData = [];
 
-  for (let m of months) {
-    const resMonth = await attendanceAPI.reportMonthly({
-      month: `${selectedYear}-${m}-01`
-    });
+        for (let m of months) {
+          const resMonth = await attendanceAPI.reportMonthly({
+            month: `${selectedYear}-${m}-01`
+          });
 
-    const data = resMonth?.data?.data || [];
-    allData.push(...data);
-  }
+          const data = resMonth?.data?.data || [];
+          allData.push(...data);
+        }
 
-  res = { data: { data: allData } };
-} 
-    else {
-      res = await attendanceAPI.getByDate(format(today));
+        res = { data: { data: allData } };
+      }
+      else {
+        res = await attendanceAPI.getByDate(format(today));
+      }
+
+      let rows = res?.data?.data || [];
+      if (search.trim()) {
+        const s = search.toLowerCase();
+        rows = rows.filter(r =>
+          r.employeeName?.toLowerCase().includes(s) ||
+          r.employeeId?.toLowerCase().includes(s)
+        );
+      }
+
+      setAdminRows(rows);
+    } catch (e) {
+      setAdminRows([]);
+      setAdminError(e.response?.data?.message || e.message || 'Failed to load attendance');
+    } finally {
+      setAdminLoading(false);
     }
+  };
 
-    let rows = res?.data?.data || [];
-    if (search.trim()) {
-      const s = search.toLowerCase();
-      rows = rows.filter(r =>
-        r.employeeName?.toLowerCase().includes(s) ||
-        r.employeeId?.toLowerCase().includes(s)
-      );
+  // 1️⃣ Admin data loader
+  useEffect(() => {
+    if (isPrivilegedRole) {
+      loadAdminAttendance();
     }
+  }, [
+    isPrivilegedRole,
+    filterType,
+    selectedDate,
+    selectedMonth,
+    selectedYear,
+    search
+  ]);
 
-    setAdminRows(rows);
-  } catch (e) {
-    setAdminRows([]);
-    setAdminError(e.response?.data?.message || e.message || 'Failed to load attendance');
-  } finally {
-    setAdminLoading(false);
-  }
-};
+  // 2️⃣ ✅ ADD THIS (Employee auto load)
+  useEffect(() => {
+    if (!isPrivilegedRole) {
+      fetchToday();
+      getLocation();
+    }
+  }, []);
+  const showRunningTimer = todayRecord?.checkInTime && !todayRecord?.checkOutTime;
 
- // 1️⃣ Admin data loader
-useEffect(() => {
-  if (isPrivilegedRole) {
-    loadAdminAttendance();
-  }
-}, [
-  isPrivilegedRole,
-  filterType,
-  selectedDate,
-  selectedMonth,
-  selectedYear,
-  search
-]);
-
-// 2️⃣ ✅ ADD THIS (Employee auto load)
-useEffect(() => {
-  if (!isPrivilegedRole) {
-    fetchToday();
-    getLocation();
-  }
-}, []);
-const showRunningTimer = todayRecord?.checkInTime && !todayRecord?.checkOutTime;
-
-useEffect(() => {
-  if (!showRunningTimer) return;
-  const id = setInterval(() => setRunningTick((c) => c + 1), 1000);
-  return () => clearInterval(id);
-}, [showRunningTimer]);
+  useEffect(() => {
+    if (!showRunningTimer) return;
+    const id = setInterval(() => setRunningTick((c) => c + 1), 1000);
+    return () => clearInterval(id);
+  }, [showRunningTimer]);
   const getLocation = () => {
     setLocating(true);
     setGeoError('');
@@ -485,41 +485,41 @@ useEffect(() => {
     loadAdminAttendance(); // refresh table
   };
   // ── EXPORT CSV ─────────────────────────────────
-const exportToCSV = () => {
-  if (!adminRows.length) return;
+  const exportToCSV = () => {
+    if (!adminRows.length) return;
 
-  const headers = [
-    'Employee Name',
-    'Employee ID',
-    'Check In',
-    'Check Out',
-    'Status'
-  ];
+    const headers = [
+      'Employee Name',
+      'Employee ID',
+      'Check In',
+      'Check Out',
+      'Status'
+    ];
 
-  const rows = adminRows.map(r => [
-    r.employeeName,
-    r.employeeId,
-    r.checkIn || '',
-    r.checkOut || '',
-    r.status
-  ]);
+    const rows = adminRows.map(r => [
+      r.employeeName,
+      r.employeeId,
+      r.checkIn || '',
+      r.checkOut || '',
+      r.status
+    ]);
 
-  let csvContent =
-    'data:text/csv;charset=utf-8,' +
-    [headers, ...rows].map(e => e.join(',')).join('\n');
+    let csvContent =
+      'data:text/csv;charset=utf-8,' +
+      [headers, ...rows].map(e => e.join(',')).join('\n');
 
-  const encodedUri = encodeURI(csvContent);
-  const link = document.createElement('a');
-  link.setAttribute('href', encodedUri);
-  link.setAttribute('download', 'attendance.csv');
-  document.body.appendChild(link);
-  link.click();
-};
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', 'attendance.csv');
+    document.body.appendChild(link);
+    link.click();
+  };
 
-  const alreadyCheckedIn  = supportsTodayApi ? !!todayRecord?.checkInTime : fallbackCheckedIn;
+  const alreadyCheckedIn = supportsTodayApi ? !!todayRecord?.checkInTime : fallbackCheckedIn;
   const alreadyCheckedOut = supportsTodayApi ? !!todayRecord?.checkOutTime : fallbackCheckedOut;
-  const eitherLoading     = checkInLoading || checkOutLoading;
-  const checkOutDisabled  = eitherLoading || alreadyCheckedOut;
+  const eitherLoading = checkInLoading || checkOutLoading;
+  const checkOutDisabled = eitherLoading || alreadyCheckedOut;
 
   // ── ADMIN / HR / MANAGER VIEW ─────────────────────────────────────────────
   if (isPrivilegedRole) {
@@ -550,93 +550,93 @@ const exportToCSV = () => {
           </div>
         )}
         {/* ── FILTER BAR ───────────────────────────────── */}
-<div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between flex-wrap gap-3">
+        <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between flex-wrap gap-3">
 
-  {/* LEFT SIDE */}
-  <div className="flex items-center gap-3 flex-wrap">
+          {/* LEFT SIDE */}
+          <div className="flex items-center gap-3 flex-wrap">
 
-    {/* Search */}
-    <div className="relative">
-      <input
-        type="text"
-        placeholder="Search employee..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm w-64"
-      />
-      <span className="absolute left-2 top-2.5 text-slate-400">🔍</span>
-    </div>
+            {/* Search */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search employee..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm w-64"
+              />
+              <span className="absolute left-2 top-2.5 text-slate-400">🔍</span>
+            </div>
 
-    {/* Filter */}
-    <select
-      value={filterType}
-      onChange={(e) => setFilterType(e.target.value)}
-      className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
-    >
-      <option value="TODAY">Today</option>
-      <option value="YESTERDAY">Yesterday</option>
-      <option value="DATE">Custom Date</option>
-      <option value="MONTH">Month</option>
-      <option value="YEAR">Year</option>
-    </select>
+            {/* Filter */}
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            >
+              <option value="TODAY">Today</option>
+              <option value="YESTERDAY">Yesterday</option>
+              <option value="DATE">Custom Date</option>
+              <option value="MONTH">Month</option>
+              <option value="YEAR">Year</option>
+            </select>
 
-    {filterType === 'DATE' && (
-      <input
-        type="date"
-        value={selectedDate}
-        onChange={(e) => setSelectedDate(e.target.value)}
-        className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
-      />
-    )}
+            {filterType === 'DATE' && (
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              />
+            )}
 
-    {filterType === 'MONTH' && (
-      <input
-        type="month"
-        value={selectedMonth}
-        onChange={(e) => setSelectedMonth(e.target.value)}
-        className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
-      />
-    )}
+            {filterType === 'MONTH' && (
+              <input
+                type="month"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              />
+            )}
 
-    {filterType === 'YEAR' && (
-  <select
-    value={selectedYear}
-    onChange={(e) => setSelectedYear(e.target.value)}
-    className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
-  >
-    <option value="">Select Year</option>
-    <option value="2026">2026</option>
-    <option value="2025">2025</option>
-    <option value="2024">2024</option>
-  </select>
-)}
+            {filterType === 'YEAR' && (
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              >
+                <option value="">Select Year</option>
+                <option value="2026">2026</option>
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+              </select>
+            )}
 
-    {/* Reset */}
-    <button
-      onClick={() => {
-        setSearch('');
-        setFilterType('TODAY');
-        setSelectedDate('');
-        setSelectedMonth('');
-        setSelectedYear('');
-      }}
-      className="text-sm text-red-500 hover:underline"
-    >
-      Reset
-    </button>
+            {/* Reset */}
+            <button
+              onClick={() => {
+                setSearch('');
+                setFilterType('TODAY');
+                setSelectedDate('');
+                setSelectedMonth('');
+                setSelectedYear('');
+              }}
+              className="text-sm text-red-500 hover:underline"
+            >
+              Reset
+            </button>
 
-  </div>
+          </div>
 
-  {/* RIGHT SIDE (EXPORT BUTTON) */}
-  <button
-    onClick={exportToCSV}
-    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-  >
-    <Download size={16} />
-    Export CSV
-  </button>
+          {/* RIGHT SIDE (EXPORT BUTTON) */}
+          <button
+            onClick={exportToCSV}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+          >
+            <Download size={16} />
+            Export CSV
+          </button>
 
-</div>
+        </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
@@ -751,6 +751,52 @@ const exportToCSV = () => {
         <p className="text-slate-500 text-sm mt-1">{today}</p>
       </div>
 
+      <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
+        <h2 className="font-semibold text-slate-700 flex items-center gap-2 text-sm mb-3"><Camera size={15} /> Photo</h2>
+        {photoPreview ? (
+          <div className="relative inline-block">
+            <img src={photoPreview} alt="Preview" className="w-40 h-32 object-cover rounded-lg border border-slate-200" />
+            <button onClick={() => { setPhotoFile(null); setPhotoPreview(''); }} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600"><X size={14} /></button>
+          </div>
+        ) : (
+          <div className="flex gap-3">
+            <button onClick={startCamera} className="flex items-center gap-2 px-4 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors">
+              <Camera size={14} /> Use Camera
+            </button>
+            {/* <label className="flex items-center gap-2 px-4 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 cursor-pointer transition-colors">
+              <Upload size={14} /> Upload File
+              <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+            </label> */}
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <button onClick={handleCheckIn} disabled={eitherLoading || alreadyCheckedIn || !location}
+          className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-3.5 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+          <LogIn size={18} />
+          {checkInLoading ? 'Checking In…' : alreadyCheckedIn ? 'Already Checked In' : 'Check In'}
+        </button>
+        <button onClick={handleCheckOut} disabled={checkOutDisabled}
+          className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold py-3.5 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+          <LogOut size={18} />
+          {checkOutLoading ? 'Checking Out…' : alreadyCheckedOut ? 'Already Checked Out' : 'Check Out'}
+        </button>
+      </div>
+
+      {showCamera && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-5 space-y-3 w-full max-w-sm mx-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">Take Photo</h3>
+              <button onClick={stopCamera} className="p-1 hover:bg-slate-100 rounded"><X size={18} /></button>
+            </div>
+            <video ref={videoRef} autoPlay playsInline className="w-full rounded-lg bg-black" />
+            <button onClick={capturePhoto} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg text-sm font-medium">Capture Photo</button>
+          </div>
+        </div>
+      )}
+
       {/* Today's timing card */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-50 flex items-center justify-between">
@@ -794,7 +840,7 @@ const exportToCSV = () => {
               const elapsedMs = running ? Date.now() - new Date(todayRecord.checkInTime).getTime() : 0;
               const displayHours = hasWorkHours ? formatDuration(todayRecord.workingHours)
                 : running ? formatElapsedMs(elapsedMs)
-                : (alreadyCheckedIn ? 'In progress' : '—');
+                  : (alreadyCheckedIn ? 'In progress' : '—');
               const isHighlight = hasWorkHours || running;
               return (
                 <div className={`rounded-xl p-4 text-center ${isHighlight ? 'bg-indigo-50 border border-indigo-100' : 'bg-slate-50 border border-slate-100'}`}>
@@ -842,8 +888,7 @@ const exportToCSV = () => {
       </div>
 
       {status !== 'idle' && (
-        <div className={`flex items-start gap-3 px-4 py-3 rounded-xl text-sm font-medium ${
-          status === 'success' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
+        <div className={`flex items-start gap-3 px-4 py-3 rounded-xl text-sm font-medium ${status === 'success' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
           {status === 'success' ? <CheckCircle size={18} className="mt-0.5 shrink-0" /> : <AlertCircle size={18} className="mt-0.5 shrink-0" />}
           {message}
         </div>
@@ -867,51 +912,6 @@ const exportToCSV = () => {
         }
       </div>
 
-      <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
-        <h2 className="font-semibold text-slate-700 flex items-center gap-2 text-sm mb-3"><Camera size={15} /> Photo (optional)</h2>
-        {photoPreview ? (
-          <div className="relative inline-block">
-            <img src={photoPreview} alt="Preview" className="w-40 h-32 object-cover rounded-lg border border-slate-200" />
-            <button onClick={() => { setPhotoFile(null); setPhotoPreview(''); }} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600"><X size={14} /></button>
-          </div>
-        ) : (
-          <div className="flex gap-3">
-            <button onClick={startCamera} className="flex items-center gap-2 px-4 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors">
-              <Camera size={14} /> Use Camera
-            </button>
-            <label className="flex items-center gap-2 px-4 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 cursor-pointer transition-colors">
-              <Upload size={14} /> Upload File
-              <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-            </label>
-          </div>
-        )}
-      </div>
-
-      {showCamera && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-5 space-y-3 w-full max-w-sm mx-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold">Take Photo</h3>
-              <button onClick={stopCamera} className="p-1 hover:bg-slate-100 rounded"><X size={18} /></button>
-            </div>
-            <video ref={videoRef} autoPlay playsInline className="w-full rounded-lg bg-black" />
-            <button onClick={capturePhoto} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg text-sm font-medium">Capture Photo</button>
-          </div>
-        </div>
-      )}
-
-      <div className="grid grid-cols-2 gap-4">
-        <button onClick={handleCheckIn} disabled={eitherLoading || alreadyCheckedIn || !location}
-          className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-3.5 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm">
-          <LogIn size={18} />
-          {checkInLoading ? 'Checking In…' : alreadyCheckedIn ? 'Already Checked In' : 'Check In'}
-        </button>
-        <button onClick={handleCheckOut} disabled={checkOutDisabled}
-          className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold py-3.5 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm">
-          <LogOut size={18} />
-          {checkOutLoading ? 'Checking Out…' : alreadyCheckedOut ? 'Already Checked Out' : 'Check Out'}
-        </button>
-      </div>
     </div>
   );
 }

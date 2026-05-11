@@ -90,6 +90,8 @@ function AppRoutes() {
         />
 
         <Route path="/leaves" element={<Leaves />} />
+        <Route path="/my-leaves" element={<Leaves />} />
+        <Route path="/leave-approvals" element={<Leaves />} />
 
         <Route
           path="/payroll"

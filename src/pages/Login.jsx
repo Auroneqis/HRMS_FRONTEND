@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { Eye, EyeOff, Lock, Mail, Shield, Users, UserCheck, User } from 'lucide-react';
+import auro from "../assets/auro.jpeg";
 
 export default function Login() {
   const { login, loading, error } = useAuth();
@@ -32,12 +33,12 @@ export default function Login() {
   useEffect(() => {
     const check = async () => {
       try {
-        await fetch(`${apiUrl}/api/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ emailId: 'ping@test.com', password: 'ping' }),
-          signal: AbortSignal.timeout(4000),
-        });
+        // await fetch(`${apiUrl}/api/auth/login`, {
+        //   method: 'POST',
+        //   headers: { 'Content-Type': 'application/json' },
+        //   body: JSON.stringify({ emailId: 'ping@test.com', password: 'ping' }),
+        //   signal: AbortSignal.timeout(4000),
+        // });
         setServerStatus('online');
       } catch (e) {
         setServerStatus(e.name === 'AbortError' ? 'offline' : 'online');
@@ -99,7 +100,7 @@ export default function Login() {
         <div className={`brand-panel ${mounted ? 'visible' : ''}`}>
           <div className="brand-content">
             <div className="logo-container">
-              <img src="/stripedata-logo.png" alt="STRIPEDATA" className="logo-image" />
+              <img src={auro} alt="Auro" className="logo-image" />
             </div>
 
             <div className="tagline">
@@ -304,7 +305,7 @@ export default function Login() {
         .brand-panel.visible { opacity: 1; transform: translateX(0); }
         .brand-content { max-width: 550px; }
         .logo-container { display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
-        .logo-image { max-width: 500px; width: 100%; height: auto; animation: logo-fade-in 1s ease-out; filter: drop-shadow(0 0 20px rgba(59,130,246,0.3)); }
+        .logo-image { max-width: 300px; width: 100%; height: auto; animation: logo-fade-in 1s ease-out; filter: drop-shadow(0 0 20px rgba(59,130,246,0.3)); }
         @keyframes logo-fade-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         .tagline { font-size: 13px; color: #64748b; margin-bottom: 40px; letter-spacing: 0.5px; font-weight: 500; display: flex; align-items: center; gap: 12px; }
         .tagline-line { flex: 1; height: 1px; background: linear-gradient(to right, transparent, #64748b, transparent); }

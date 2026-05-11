@@ -25,7 +25,7 @@ const navItems = [
 
   // 🔶 My Workspace (Employee-like)
   { to: '/attendance', icon: Clock, label: 'My Attendance', roles: ['EMPLOYEE', 'MANAGER'] },
-  { to: '/leaves', icon: CalendarDays, label: 'My Leaves', roles: ['EMPLOYEE', 'MANAGER'] },
+  { to: '/my-leaves', icon: CalendarDays, label: 'My Leaves', roles: ['EMPLOYEE', 'MANAGER'] },
   { to: '/calendar', icon: Calendar, label: 'My Calendar', roles: ['EMPLOYEE', 'MANAGER'] },
   { to: '/payslips', icon: FileSpreadsheet, label: 'My Payslips', roles: ['EMPLOYEE', 'MANAGER'] },
   { to: '/form16', icon: FileText, label: 'My Form 16', roles: ['EMPLOYEE', 'MANAGER'] },
@@ -34,7 +34,7 @@ const navItems = [
   { to: '/admins', icon: ShieldCheck, label: 'Admin Users', roles: ['ADMIN', 'SUPER_ADMIN'] },
   { to: '/leave-policy', icon: CalendarDays, label: 'Leave Policy', roles: ['ADMIN', 'SUPER_ADMIN'] },
   { to: '/emails', icon: Mail, label: 'Email Logs', roles: ['ADMIN', 'SUPER_ADMIN'] },
-  { to: '/leaves', icon: CalendarDays, label: 'Leave Approvals', roles: ['ADMIN', 'SUPER_ADMIN', 'MANAGER','HR'] },
+  { to: '/leave-approvals', icon: CalendarDays, label: 'Leave Approvals', roles: ['ADMIN', 'SUPER_ADMIN', 'MANAGER','HR'] },
 ];
 export default function Sidebar() {
   const { user, logout } = useAuth();
