@@ -128,7 +128,12 @@ export default function ResetPassword() {
                       type={showNew ? 'text' : 'password'}
                       placeholder="Enter new password"
                       value={form.newPassword}
-                      onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
+                      onChange={(e) =>
+                          setForm(prev => ({
+                            ...prev,
+                            newPassword: e.target.value
+                          }))
+                        }
                       required
                     />
                     <button type="button" className="toggle-password" onClick={() => setShowNew(!showNew)}>
@@ -146,7 +151,12 @@ export default function ResetPassword() {
                       type={showConfirm ? 'text' : 'password'}
                       placeholder="Confirm new password"
                       value={form.confirmPassword}
-                      onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                      onChange={(e) =>
+                          setForm(prev => ({
+                            ...prev,
+                            confirmPassword: e.target.value
+                          }))
+                        }
                       required
                     />
                     <button type="button" className="toggle-password" onClick={() => setShowConfirm(!showConfirm)}>

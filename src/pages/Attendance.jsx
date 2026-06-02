@@ -218,7 +218,7 @@ function AuditBadge({ row }) {
 export default function Attendance() {
   const { isAdmin, isHR, isManager } = useAuth();
   const navigate = useNavigate();
-  const isPrivilegedRole = isAdmin || isHR
+  const isPrivilegedRole = isAdmin || isHR || isManager;
 
   const [adminRows, setAdminRows] = useState([]);
   const [adminLoading, setAdminLoading] = useState(false);
@@ -444,23 +444,78 @@ export default function Attendance() {
   const stopCamera = () => { streamRef.current?.getTracks().forEach(t => t.stop()); setShowCamera(false); };
   const handleFileChange = (e) => { const f = e.target.files[0]; if (f) { setPhotoFile(f); setPhotoPreview(URL.createObjectURL(f)); } };
 
-  const handleCheckIn = async () => {
-    if (!location) { alert('Please allow location access first'); return; }
-    if (checkInLoading || checkOutLoading) return;
-    setCheckInLoading(true); setStatus('idle');
+const handleCheckIn = async () => {
+  if (!location) {
+    alert("Please allow location access first");
+    return;
+  }
+
+  if (!photoFile) {
+    alert("Please capture your photo before Check In");
+    return;
+  }
+
+  if (checkInLoading || checkOutLoading) return;
+
+  setCheckInLoading(true);
+  setStatus("idle");
+
+  try {
+    let photoUrl = "no-photo";
+
     try {
-      let photoUrl = 'no-photo';
-      if (photoFile) { const upRes = await uploadAPI.attendancePhoto(photoFile); photoUrl = upRes.data?.data || upRes.data?.url || 'no-photo'; }
-      const res = await attendanceAPI.checkIn({ loginPhotoUrl: photoUrl, latitude: location.lat, longitude: location.lng, address });
-      setStatus('success'); setMessage(res.data?.message || 'Checked in successfully!');
-      setFallbackCheckedIn(true);
-      if (supportsTodayApi) await fetchToday();
-    } catch (e) {
-      const errMsg = e.response?.data?.message || e.message || 'Check-in failed';
-      setStatus('error'); setMessage(`Check-in failed: ${errMsg}`);
-      if (errMsg.toLowerCase().includes('already checked in')) { setFallbackCheckedIn(true); if (supportsTodayApi) await fetchToday(); }
-    } finally { setCheckInLoading(false); }
-  };
+      const upRes = await uploadAPI.attendancePhoto(photoFile);
+
+      console.log("UPLOAD RESPONSE:", upRes.data);
+
+      photoUrl =
+        upRes?.data?.data ||
+        upRes?.data?.url ||
+        upRes?.data?.fileUrl ||
+        upRes?.data?.photoUrl ||
+        upRes?.data?.path ||
+        "no-photo";
+    } catch (uploadError) {
+      console.error("UPLOAD ERROR:", uploadError);
+      console.error("UPLOAD RESPONSE:", uploadError?.response?.data);
+
+      setStatus("error");
+      setMessage(
+        uploadError?.response?.data?.message ||
+          "Photo upload failed. Check backend upload API."
+      );
+      return;
+    }
+
+    const res = await attendanceAPI.checkIn({
+      loginPhotoUrl: photoUrl,
+      latitude: location.lat,
+      longitude: location.lng,
+      address,
+    });
+
+    setStatus("success");
+    setMessage(res.data?.message || "Checked in successfully!");
+
+    setFallbackCheckedIn(true);
+
+    if (supportsTodayApi) {
+      await fetchToday();
+    }
+  } catch (e) {
+    console.error("CHECKIN ERROR:", e);
+
+    const errMsg =
+      e.response?.data?.message ||
+      e.message ||
+      "Check-in failed";
+
+    setStatus("error");
+    setMessage(`Check-in failed: ${errMsg}`);
+  } finally {
+    setCheckInLoading(false);
+  }
+};
 
   const handleCheckOut = async () => {
     if (checkInLoading || checkOutLoading) return;
@@ -492,6 +547,7 @@ export default function Attendance() {
       'Employee Name',
       'Employee ID',
       'Check In',
+      'checkInAddress',
       'Check Out',
       'Status'
     ];
@@ -500,6 +556,7 @@ export default function Attendance() {
       r.employeeName,
       r.employeeId,
       r.checkIn || '',
+      r.checkInAddress,
       r.checkOut || '',
       r.status
     ]);
@@ -666,66 +723,61 @@ export default function Attendance() {
                     <th className="px-6 py-3">Employee</th>
                     <th className="px-6 py-3">Employee ID</th>
                     <th className="px-6 py-3">Check In</th>
+                    <th className="px-6 py-3">Location</th>
                     <th className="px-6 py-3">Check Out</th>
+                    
                     <th className="px-6 py-3">Status</th>
                     <th className="px-6 py-3">Edit Info</th>
                     <th className="px-6 py-3">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-sm">
-                  {adminRows.map((row, idx) => (
-                    <tr key={`${row?.employeeId}-${idx}`} className="hover:bg-slate-50">
-                      <td className="px-6 py-3 font-medium text-slate-800">
-                        {row?.employeeName || 'Employee'}
-                      </td>
-                      <td className="px-6 py-3 text-slate-600">
-                        {row?.employeeId || '—'}
-                      </td>
-                      <td className="px-6 py-3 text-slate-600">
-                        {row?.checkIn ? formatDateTime(row.checkIn) : '—'}
-                      </td>
-                      <td className="px-6 py-3 text-slate-600">
-                        {row?.checkOut ? formatDateTime(row.checkOut) : '—'}
-                      </td>
-                      <td className="px-6 py-3">
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_COLORS[row?.status] || STATUS_COLORS.NOT_MARKED}`}>
-                          {row?.status || 'NOT_MARKED'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-3">
-                        {row?.isEdited ? (
-                          <div>
-                            <span className="inline-flex items-center gap-1 text-[11px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
-                              <Pencil size={9} /> Edited
-                            </span>
-                            <p className="text-[10px] text-slate-400 mt-0.5">
-                              by {row.editedByName} ({row.editedByRole})
-                            </p>
-                            <p className="text-[10px] text-slate-400">
-                              {row.editedAt ? new Date(row.editedAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true }) : ''}
-                            </p>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-slate-300">—</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-3">
-                        {/* Only show edit button if attendance record exists */}
-                        {row?.attendanceId ? (
-                          <button
-                            onClick={() => setEditRow(row)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors"
-                          >
-                            <Pencil size={12} />
-                            Edit
-                          </button>
-                        ) : (
-                          <span className="text-xs text-slate-300">No record</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
+               <tbody className="divide-y divide-slate-100 text-sm">
+  {adminRows.map((row, idx) => (
+    <tr key={`${row?.employeeId}-${idx}`} className="hover:bg-slate-50">
+
+      <td className="px-6 py-3 font-medium text-slate-800">
+        {row?.employeeName || 'Employee'}
+      </td>
+
+      <td className="px-6 py-3 text-slate-600">
+        {row?.employeeId || '—'}
+      </td>
+
+      {/* CHECK IN */}
+      <td className="px-6 py-3 text-slate-600">
+        {row?.checkIn ? formatDateTime(row.checkIn) : '—'}
+      </td>
+
+      {/* LOCATION */}
+      <td className="px-6 py-3 text-slate-600 max-w-xs">
+        {row?.checkInAddress ? (
+          <div>
+            <p className="text-sm text-slate-700 truncate">
+              {row.checkInAddress}
+            </p>
+
+            {(row?.checkInLatitude && row?.checkInLongitude) && (
+              <p className="text-[11px] text-slate-400 font-mono">
+                {row.checkInLatitude}, {row.checkInLongitude}
+              </p>
+            )}
+          </div>
+        ) : (
+          '—'
+        )}
+      </td>
+
+      {/* CHECK OUT */}
+      <td className="px-6 py-3 text-slate-600">
+        {row?.checkOut ? formatDateTime(row.checkOut) : '—'}
+      </td>
+
+      <td className="px-6 py-3">
+        ...
+      </td>
+    </tr>
+  ))}
+</tbody>
               </table>
             </div>
           )}
@@ -752,7 +804,7 @@ export default function Attendance() {
       </div>
 
       <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
-        <h2 className="font-semibold text-slate-700 flex items-center gap-2 text-sm mb-3"><Camera size={15} /> Photo</h2>
+        <h2 className="font-semibold text-slate-700 flex items-center gap-2 text-sm mb-3"><Camera size={15} /> *Photo </h2>
         {photoPreview ? (
           <div className="relative inline-block">
             <img src={photoPreview} alt="Preview" className="w-40 h-32 object-cover rounded-lg border border-slate-200" />
@@ -772,7 +824,7 @@ export default function Attendance() {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <button onClick={handleCheckIn} disabled={eitherLoading || alreadyCheckedIn || !location}
+        <button onClick={handleCheckIn} disabled={eitherLoading ||alreadyCheckedIn ||!location ||!photoFile}
           className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-3.5 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm">
           <LogIn size={18} />
           {checkInLoading ? 'Checking In…' : alreadyCheckedIn ? 'Already Checked In' : 'Check In'}

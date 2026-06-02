@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { leaveAPI, employeeAPI } from '../api/services';
+import { leaveAPI, employeeAPI,leavePolicyAPI } from '../api/services';
 import { useAuth } from '../context/useAuth';
 import { Plus, X, CheckCircle, XCircle, Clock, TrendingUp, AlertCircle } from 'lucide-react';
 
@@ -93,6 +93,8 @@ function LeaveBalanceSection({ employeeDbId }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+
 
   useEffect(() => {
     if (!employeeDbId) return;
@@ -102,13 +104,19 @@ function LeaveBalanceSection({ employeeDbId }) {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
     const base = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 
-    fetch(`${base}/api/leaves/my-balance/${employeeDbId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); })
-      .then((json) => setData(json.data))
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+   fetch(`${base}/api/leaves/my-balance/${employeeDbId}`, {
+  headers: { Authorization: `Bearer ${token}` },
+})
+  .then((r) => {
+    if (!r.ok) throw new Error(`${r.status}`);
+    return r.json();
+  })
+  .then((json) => {
+    console.log("Leave Balance API:", json.data);
+    setData(json.data);
+  })
+  .catch((e) => setError(e.message))
+  .finally(() => setLoading(false));
   }, [employeeDbId]);
 
   if (loading) return (
@@ -126,15 +134,44 @@ function LeaveBalanceSection({ employeeDbId }) {
 
   if (!data) return null;
 
-  const cards = [
-    { key: 'planned', label: 'Planned Leave', total: data.plannedTotal ?? 0, used: data.plannedUsed ?? 0, remaining: data.plannedRemaining ?? 0, color: '#6366f1', light: '#eef2ff', border: '#c7d2fe' },
-    { key: 'sick', label: 'Sick Leave', total: data.sickTotal ?? 0, used: data.sickUsed ?? 0, remaining: data.sickRemaining ?? 0, color: '#f59e0b', light: '#fffbeb', border: '#fde68a' },
-    ...(data.casualUsed > 0 ? [{ key: 'casual', label: 'Casual Leave', total: data.plannedTotal ?? 0, used: data.casualUsed ?? 0, remaining: Math.max((data.plannedTotal ?? 0) - (data.casualUsed ?? 0), 0), color: '#10b981', light: '#ecfdf5', border: '#6ee7b7' }] : []),
-  ];
+const leaveConfigs = [
+  { key: "planned", label: "Planned Leave" },
+  { key: "earned", label: "Earned Leave" },
+  { key: "wfh", label: "Work From Home" },
+  { key: "casual", label: "Casual Leave" },
+  { key: "sick", label: "Sick Leave" },
+  { key: "maternity", label: "Maternity Leave" },
+  { key: "bereavement", label: "Bereavement Leave" },
+  { key: "marriage", label: "Marriage Leave" },
+  { key: "lop", label: "Loss Of Pay" },
+  { key: "publicHoliday", label: "Public Holiday" },
+  { key: "optionalHoliday", label: "Optional Holiday" },
+  { key: "paternity", label: "Paternity Leave" },
+];
 
-  const grandTotal = (data.plannedTotal ?? 0) + (data.sickTotal ?? 0);
-  const grandUsed = (data.plannedUsed ?? 0) + (data.sickUsed ?? 0) + (data.casualUsed ?? 0);
-  const grandRemaining = Math.max(grandTotal - grandUsed, 0);
+const cards = leaveConfigs
+  .map((leave) => ({
+    key: leave.key,
+    label: leave.label,
+    total: data?.[`${leave.key}Total`] ?? 0,
+    used: data?.[`${leave.key}Used`] ?? 0,
+    remaining: data?.[`${leave.key}Remaining`] ?? 0,
+  }))
+  .filter((card) => card.total > 0);
+const grandTotal =
+  (data.earnedTotal ?? 0) +
+  (data.plannedTotal ?? 0) +
+  (data.wfhTotal ?? 0);
+
+const grandUsed =
+  (data.earnedUsed ?? 0) +
+  (data.plannedUsed ?? 0) +
+  (data.wfhUsed ?? 0);
+
+const grandRemaining =
+  (data.earnedRemaining ?? 0) +
+  (data.plannedRemaining ?? 0) +
+  (data.wfhRemaining ?? 0);
 
   return (
     <div>
@@ -176,6 +213,7 @@ export default function Leaves() {
   const [page, setPage] = useState(0);
   const [size] = useState(5);
   const [totalPages, setTotalPages] = useState(0);
+  const [availableLeaveTypes, setAvailableLeaveTypes] = useState([]);
 
   const [filters, setFilters] = useState({
     status: canManage ? 'PENDING' : '',
@@ -251,6 +289,26 @@ export default function Leaves() {
       setLoading(false);
     }
   };
+  
+  useEffect(() => {
+  loadLeaveTypes();
+}, []);
+
+const loadLeaveTypes = async () => {
+  try {
+    const res = await leavePolicyAPI.getAll();
+
+    const types = [
+      ...new Set(
+        (res.data || []).map((p) => p.leaveType)
+      ),
+    ];
+
+    setAvailableLeaveTypes(types);
+  } catch (err) {
+    console.error(err);
+  }
+};
 
   useEffect(() => {
     if (!canManage && user?.id != null) setEmployeeDbId(user.id);
@@ -439,7 +497,11 @@ export default function Leaves() {
                 <select required value={form.leaveType} onChange={e => setForm(f => ({ ...f, leaveType: e.target.value }))}
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
                   <option value="">Select type…</option>
-                  {['CASUAL', 'SICK', 'EARNED', 'MATERNITY', 'PATERNITY', 'UNPAID'].map(t => <option key={t} value={t}>{t}</option>)}
+                  {availableLeaveTypes.map((t) => (
+                            <option key={t} value={t}>
+                              {t}
+                            </option>
+                          ))}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">

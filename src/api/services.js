@@ -37,11 +37,12 @@ export const adminAPI = {
   deleteForm16: (id) => api.delete(`/admin/form16/${id}`),
 };
 export const leavePolicyAPI = {
-  create: (data) => api.post('/admin/leave-policy', data),
-  getAll: () => api.get('/admin/leave-policy'),
-  getById: (id) => api.get(`/admin/leave-policy/${id}`),
-  update: (id, data) => api.put(`/admin/leave-policy/${id}`, data),
-  delete: (id) => api.delete(`/admin/leave-policy/${id}`),
+  create: (data) => api.post('/leave-policy', data),
+  getAll: () => api.get('/leave-policy'),
+  getById: (id) => api.get(`/leave-policy/${id}`),
+  update: (id, data) => api.put(`/leave-policy/${id}`, data),
+  delete: (id) => api.delete(`/leave-policy/${id}`),
+  getLeaveTypes: () => api.get('/leave-policy/leave-types'),
 };
 
 // Employee
